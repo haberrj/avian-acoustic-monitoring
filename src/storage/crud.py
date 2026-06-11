@@ -1,25 +1,32 @@
-from datetime import datetime
 from src.storage.database import SessionLocal
 from src.storage.models import Detection
 
-def create_detection(species, confidence, lat=None, lon=None):
+
+def insert_detections(detections: list[dict]):
+    """Insert multiple detections into DB"""
+
     db = SessionLocal()
 
-    detection = Detection(
-        timestamp=datetime.utcnow(),
-        species=species,
-        confidence=confidence,
-        latitude=lat,
-        longitude=lon
-    )
+    try:
+        for d in detections:
+            detection_obj = Detection(
+                timestamp=d.get("recording_timestamp"),
+                event_time=d.get("event_time"),
+                latitude=d.get("latitude"),
+                longitude=d.get("longitude"),
+                species=d.get("species"),
+                common_name=d.get("common_name"),
+                confidence=d.get("confidence"),
+                call_duration=d.get("call_duration")
+            )
 
-    db.add(detection)
-    db.commit()
-    db.close()
+            db.add(detection_obj)
 
+        db.commit()
 
-def get_all_detections():
-    db = SessionLocal()
-    results = db.query(Detection).all()
-    db.close()
-    return results
+    except Exception as e:
+        db.rollback()
+        raise e
+
+    finally:
+        db.close()
