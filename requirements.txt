@@ -4,3 +4,6 @@ sounddevice
 scipy
 birdnetlib
 dotenv
+librosa
+tensorflow
+resampy

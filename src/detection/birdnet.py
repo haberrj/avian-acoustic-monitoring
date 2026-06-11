@@ -30,7 +30,7 @@ class BirdNetAudio:
             self.filename,
             lat=self.latitude,
             lon=self.longitude,
-            date=self.timestamp.date
+            date=self.timestamp.date()
         )
         recording.analyze()
 
@@ -42,6 +42,7 @@ class BirdNetAudio:
         analysis = self._analyze_audio()
         detections = []
         for detection in analysis:
+            print(detection)
             if detection['confidence'] >= threshold:
                 duration = detection.get("end_time", 0.0) - detection.get("start_time", 0.0)
                 if duration < 0.0:

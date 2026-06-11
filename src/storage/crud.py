@@ -17,7 +17,7 @@ def insert_detections(detections: list[dict]):
                 event_time=d.get("event_time"),
                 latitude=d.get("latitude"),
                 longitude=d.get("longitude"),
-                species=d.get("species"),
+                species=d.get("scientific_name"),
                 common_name=d.get("common_name"),
                 confidence=d.get("confidence"),
                 call_duration=d.get("call_duration")

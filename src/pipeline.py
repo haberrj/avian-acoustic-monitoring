@@ -23,7 +23,7 @@ def run_pipeline():
         analyzer = BirdNetAudio(gps_coords, file_path)
 
         # Filter detections
-        detections = analyzer.filter_detections(threshold=0.7)
+        detections = analyzer.filter_detections(threshold=0.2)
 
         if not detections:
             print("No valid detections. Deleting recording.")
