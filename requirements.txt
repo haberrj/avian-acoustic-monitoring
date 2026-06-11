@@ -1,0 +1,9 @@
+sqlalchemy
+psycopg2-binary
+sounddevice
+scipy
+birdnetlib
+dotenv
+librosa
+tensorflow
+resampy
