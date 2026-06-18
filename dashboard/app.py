@@ -6,12 +6,14 @@ from sqlalchemy import create_engine
 from dotenv import load_dotenv
 import pydeck as pdk
 import seaborn as sns
+from streamlit_autorefresh import st_autorefresh
 
 # ============================
 # CONFIG
 # ============================
 
 load_dotenv()
+st_autorefresh(interval=2_000, key="datarefresh")
 
 DATABASE_URL = (
     f"postgresql://{os.getenv('POSTGRES_USER')}:"
@@ -27,7 +29,6 @@ engine = create_engine(DATABASE_URL)
 # LOAD DATA
 # ============================
 
-@st.cache_data
 def load_data():
     query = "SELECT * FROM detections"
     return pd.read_sql(query, engine)
@@ -38,7 +39,7 @@ df = load_data()
 # UI HEADER
 # ============================
 
-st.title("🐦 Acoustic Bird Monitoring Dashboard")
+st.title("🐦 Acoustic Bird Monitoring")
 
 # Debug view
 with st.expander("🔍 Show raw data"):
@@ -73,14 +74,14 @@ threshold = st.sidebar.slider(
 df = df[df["confidence"] >= threshold]
 
 # Species filter
-species_list = sorted(df["species"].dropna().unique())
+species_list = sorted(df["common_name"].dropna().unique())
 selected_species = st.sidebar.selectbox(
     "Select species",
     ["All"] + species_list
 )
 
 if selected_species != "All":
-    df = df[df["species"] == selected_species]
+    df = df[df["common_name"] == selected_species]
 
 # ============================
 # SUMMARY METRICS
@@ -93,6 +94,58 @@ col1, col2, col3 = st.columns(3)
 col1.metric("Total detections", len(df))
 col2.metric("Unique species", df["species"].nunique())
 col3.metric("Avg confidence", round(df["confidence"].mean(), 2))
+
+# ============================
+# Detection Map
+# ============================
+
+st.subheader("🗺️ Map of Detection intensity")
+
+lat_min = df["latitude"].min()
+lat_max = df["latitude"].max()
+lon_min = df["longitude"].min()
+lon_max = df["longitude"].max()
+
+center_lat = (lat_min + lat_max) / 2
+center_lon = (lon_min + lon_max) / 2
+
+lat_range = lat_max - lat_min
+lon_range = lon_max - lon_min
+
+max_range = max(lat_range, lon_range)
+
+# ✅ Aggressive zoom scaling
+if max_range > 100:
+    zoom = 0
+elif max_range > 50:
+    zoom = 1
+elif max_range > 20:
+    zoom = 2
+elif max_range > 10:
+    zoom = 3
+elif max_range > 5:
+    zoom = 5
+else:
+    zoom = 10
+
+
+layer = pdk.Layer(
+    "HeatmapLayer",
+    data=df,
+    get_position='[longitude, latitude]',
+    get_weight="confidence",
+    radiusPixels=10,
+)
+
+view_state = pdk.ViewState(
+    latitude=df["latitude"].mean(),
+    longitude=df["longitude"].mean(),
+    zoom=zoom,
+)
+
+deck = pdk.Deck(layers=[layer], initial_view_state=view_state)
+
+st.pydeck_chart(deck)
 
 # ============================
 # TIME SERIES
@@ -163,58 +216,3 @@ activity_table = (
 )
 
 st.dataframe(activity_table)
-
-st.subheader("🗺️ Detection intensity")
-
-layer = pdk.Layer(
-    "HeatmapLayer",
-    data=df,
-    get_position='[longitude, latitude]',
-    get_weight="confidence",
-    radiusPixels=50,
-)
-
-view_state = pdk.ViewState(
-    latitude=df["latitude"].mean(),
-    longitude=df["longitude"].mean(),
-    zoom=14,
-)
-
-deck = pdk.Deck(layers=[layer], initial_view_state=view_state)
-
-st.pydeck_chart(deck)
-
-# ============================
-# TIME HEATMAP
-# ============================
-
-st.subheader("🔥 Activity heatmap (time of day vs date)")
-
-# Ensure datetime
-df["event_time"] = pd.to_datetime(df["event_time"])
-
-# Create time features
-df["date"] = df["event_time"].dt.date
-df["hour"] = df["event_time"].dt.hour
-
-# Pivot table
-heatmap_data = df.groupby(["date", "hour"]).size().unstack(fill_value=0)
-heatmap_data = heatmap_data.sort_index()
-
-# Plot with seaborn
-fig, ax = plt.subplots(figsize=(12, 6))
-
-sns.heatmap(
-    heatmap_data,
-    cmap="viridis",        # color scheme
-    linewidths=0.5,        # grid lines
-    linecolor="gray",
-    cbar_kws={"label": "Number of detections"},  # color bar label
-    ax=ax
-)
-
-# Labels
-ax.set_xlabel("Hour of Day")
-ax.set_ylabel("Date")
-
-st.pyplot(fig)

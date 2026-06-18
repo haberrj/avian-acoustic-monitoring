@@ -10,3 +10,4 @@ resampy
 streamlit
 matplotlib
 seaborn
+streamlit-autorefresh
