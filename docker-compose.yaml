@@ -15,12 +15,33 @@ services:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   migrate:
+    environment:
+      - POSTGRES_HOST=db
     build: .
     depends_on:
       - db
     env_file:
       - .env
     command: ["python", "src/storage/migrate.py"]
+
+  dashboard:
+    environment:
+      - POSTGRES_HOST=db
+    build: .
+    depends_on:
+      - db
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    command: [
+      "streamlit",
+      "run",
+      "dashboard/app.py",
+      "--server.port=3000",
+      "--server.address=0.0.0.0"
+    ]
+
 
 volumes:
   postgres_data:
