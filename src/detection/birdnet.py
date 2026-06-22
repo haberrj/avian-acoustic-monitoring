@@ -1,6 +1,7 @@
 import os
-from typing import Dict, Any, List
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List
+
 from birdnetlib import Recording
 from birdnetlib.analyzer import Analyzer
 
@@ -46,7 +47,7 @@ class BirdNetAudio:
             if detection['confidence'] >= threshold:
                 duration = detection.get("end_time", 0.0) - detection.get("start_time", 0.0)
                 if duration < 0.0:
-                    print(f"Skipping detection @ {detection.get("start_time")} invalid call duration.")
+                    print(f"Skipping detection @ {detection.get('start_time')} invalid call duration.")
                     continue  # Ignore the detection altogether
                 detection['call_duration'] = duration
                 start_offset = detection.get("start_time", 0)
