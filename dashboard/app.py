@@ -46,17 +46,21 @@ def get_engine() -> Engine:
 def load_detections() -> pd.DataFrame:
     query = """
         SELECT
-            id,
-            timestamp,
-            event_time,
-            latitude,
-            longitude,
-            species,
-            common_name,
-            call_duration,
-            confidence
-        FROM detections
-        ORDER BY event_time DESC
+            d.id,
+            d.timestamp,
+            d.event_time,
+            d.latitude,
+            d.longitude,
+            d.species,
+            d.common_name,
+            d.call_duration,
+            d.confidence,
+            s.name AS station_name,
+            s.country AS station_country,
+            s.region AS station_region
+        FROM detections d
+        LEFT JOIN stations s ON d.station_id = s.id
+        ORDER BY d.event_time DESC
     """
     return pd.read_sql(query, get_engine())
 
@@ -66,17 +70,17 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
         return df
 
     df = df.copy()
-
     df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
     df["event_time"] = pd.to_datetime(df["event_time"], errors="coerce")
-
     df["display_name"] = df["common_name"].fillna(df["species"]).fillna("Unknown")
 
-    df["station"] = (
+    fallback_station = (
         df["latitude"].round(3).astype(str)
         + ", "
         + df["longitude"].round(3).astype(str)
     )
+
+    df["station"] = df["station_name"].fillna(fallback_station)
 
     return df
 
@@ -168,6 +172,8 @@ def build_station_summary(df: pd.DataFrame) -> pd.DataFrame:
         df.dropna(subset=["latitude", "longitude"])
         .groupby("station")
         .agg(
+            country=("station_country", "first"),
+            region=("station_region", "first"),
             latitude=("latitude", "mean"),
             longitude=("longitude", "mean"),
             detections=("id", "count"),
@@ -313,6 +319,8 @@ def render_stations_tab(df: pd.DataFrame) -> None:
     station_summary = station_summary.rename(
         columns={
             "station": "Station",
+            "country": "Country",
+            "region": "Region",
             "detections": "Detections",
             "species": "Species",
             "latest_detection": "Latest Detection",
