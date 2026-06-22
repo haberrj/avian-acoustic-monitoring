@@ -9,5 +9,5 @@ tensorflow
 resampy
 streamlit
 matplotlib
-seaborn
 streamlit-autorefresh
+alembic
