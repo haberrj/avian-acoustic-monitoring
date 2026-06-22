@@ -1,20 +1,37 @@
 services:
+  recorder:
+    profiles:
+      - jobs
+    build: .
+    container_name: avian_recorder
+    env_file:
+      - .env
+    devices:
+      - /dev/snd:/dev/snd
+    group_add:
+      - audio
+    volumes:
+      - ./recordings:/app/recordings
+      - ./debug_recordings:/app/debug_recordings
+      - ./logs:/app/logs
+    restart: "no"
+    command: ["python", "-m", "src.pipeline"]
+
   db:
     image: postgres:15
     container_name: acoustic_db
-    restart: always
-
+    restart: unless-stopped
     env_file:
       - .env
-
     ports:
       - "5432:5432"
-
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   migrate:
+    profiles:
+      - jobs
     environment:
       - POSTGRES_HOST=db
     build: .
@@ -41,6 +58,15 @@ services:
       "--server.port=3000",
       "--server.address=0.0.0.0"
     ]
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: avian_cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - dashboard
 
 
 volumes:
