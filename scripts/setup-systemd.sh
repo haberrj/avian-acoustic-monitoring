@@ -6,6 +6,9 @@ REPO_DIR="/home/birdpi/avian-acoustic-monitoring"
 
 cd "$REPO_DIR"
 
+chmod +x scripts/run_recorder.sh
+chmod +x scripts/update_and_rebuild.sh
+
 sudo install -m 644 scripts/avian-recorder.service "$SERVICE_DIR/avian-recorder.service"
 sudo install -m 644 scripts/avian-recorder.timer "$SERVICE_DIR/avian-recorder.timer"
 sudo install -m 644 scripts/avian-update.service "$SERVICE_DIR/avian-update.service"

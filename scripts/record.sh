@@ -3,4 +3,4 @@ set -euo pipefail
 
 cd /home/birdpi/avian-acoustic-monitoring
 
-docker compose run --rm recorder
+docker compose --profile jobs run --rm recorder

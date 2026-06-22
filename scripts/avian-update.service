@@ -1,6 +1,9 @@
 [Unit]
-Description=Update Avian Recorder
+Description=Update Avian Acoustic Monitoring
+Requires=docker.service
+After=docker.service network-online.target
 
 [Service]
 Type=oneshot
+WorkingDirectory=/home/birdpi/avian-acoustic-monitoring
 ExecStart=/home/birdpi/avian-acoustic-monitoring/scripts/update_and_rebuild.sh

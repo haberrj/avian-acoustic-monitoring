@@ -1,8 +1,8 @@
 services:
   recorder:
-    build:
-      context: .
-      dockerfile: src/Dockerfile
+    profiles:
+      - jobs
+    build: .
     container_name: avian_recorder
     env_file:
       - .env
@@ -20,19 +20,18 @@ services:
   db:
     image: postgres:15
     container_name: acoustic_db
-    restart: always
-
+    restart: unless-stopped
     env_file:
       - .env
-
     ports:
       - "5432:5432"
-
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   migrate:
+    profiles:
+      - jobs
     environment:
       - POSTGRES_HOST=db
     build: .
@@ -59,6 +58,15 @@ services:
       "--server.port=3000",
       "--server.address=0.0.0.0"
     ]
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: avian_cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - dashboard
 
 
 volumes:
