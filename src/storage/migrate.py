@@ -1,8 +1,11 @@
-import os
-import sys
+from alembic import command
+from alembic.config import Config
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))  # NOQA: E402 pylint: disable=[C0413]
-from src.storage.database import engine
-from src.storage.models import Base
 
-Base.metadata.create_all(bind=engine)
+def main() -> None:
+    alembic_cfg = Config("alembic.ini")
+    command.upgrade(alembic_cfg, "head")
+
+
+if __name__ == "__main__":
+    main()
