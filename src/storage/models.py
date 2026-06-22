@@ -1,6 +1,7 @@
-from sqlalchemy.orm import declarative_base
-from sqlalchemy import Column, Integer, String, Float, DateTime
 from datetime import datetime, timezone
+
+from sqlalchemy import Column, DateTime, Float, Integer, String
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
