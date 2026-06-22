@@ -17,18 +17,17 @@ from streamlit_autorefresh import st_autorefresh
 class DashboardFilters:
     confidence_threshold: float
     selected_species: str
-    date_range: tuple[pd.Timestamp, pd.Timestamp] | None
+    selected_station: str
 
 
 load_dotenv()
 
 st.set_page_config(
     page_title="Avian Acoustic Monitoring",
-    page_icon=None,
     layout="wide",
 )
 
-st_autorefresh(interval=60_000, key="datarefresh")
+st_autorefresh(interval=60_000, key="dashboard_refresh")
 
 
 @st.cache_resource
@@ -67,9 +66,18 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
         return df
 
     df = df.copy()
+
     df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
     df["event_time"] = pd.to_datetime(df["event_time"], errors="coerce")
+
     df["display_name"] = df["common_name"].fillna(df["species"]).fillna("Unknown")
+
+    df["station"] = (
+        df["latitude"].round(3).astype(str)
+        + ", "
+        + df["longitude"].round(3).astype(str)
+    )
+
     return df
 
 
@@ -85,33 +93,19 @@ def render_sidebar(df: pd.DataFrame) -> DashboardFilters:
     )
 
     species_options = ["All"]
+    station_options = ["All"]
+
     if not df.empty:
-        species_options += sorted(df["display_name"].dropna().unique().tolist())
+        species_options += sorted(df["display_name"].dropna().unique())
+        station_options += sorted(df["station"].dropna().unique())
 
     selected_species = st.sidebar.selectbox("Species", species_options)
-
-    date_range = None
-    if not df.empty and df["event_time"].notna().any():
-        min_date = df["event_time"].min().date()
-        max_date = df["event_time"].max().date()
-
-        selected_range = st.sidebar.date_input(
-            "Date range",
-            value=(min_date, max_date),
-            min_value=min_date,
-            max_value=max_date,
-        )
-
-        if isinstance(selected_range, tuple) and len(selected_range) == 2:
-            date_range = (
-                pd.Timestamp(selected_range[0]),
-                pd.Timestamp(selected_range[1]) + pd.Timedelta(days=1),
-            )
+    selected_station = st.sidebar.selectbox("Station", station_options)
 
     return DashboardFilters(
         confidence_threshold=confidence_threshold,
         selected_species=selected_species,
-        date_range=date_range,
+        selected_station=selected_station,
     )
 
 
@@ -124,48 +118,34 @@ def apply_filters(df: pd.DataFrame, filters: DashboardFilters) -> pd.DataFrame:
     if filters.selected_species != "All":
         filtered = filtered[filtered["display_name"] == filters.selected_species]
 
-    if filters.date_range is not None:
-        start_date, end_date = filters.date_range
-        filtered = filtered[
-            (filtered["event_time"] >= start_date)
-            & (filtered["event_time"] < end_date)
-        ]
+    if filters.selected_station != "All":
+        filtered = filtered[filtered["station"] == filters.selected_station]
 
     return filtered
 
 
-def render_header(df: pd.DataFrame) -> None:
-    st.title("Avian Acoustic Monitoring")
-
-    if df.empty or df["event_time"].isna().all():
-        st.caption("No detections available.")
-        return
-
-    latest_detection = df["event_time"].max()
-    st.caption(f"Last detection: {latest_detection:%Y-%m-%d %H:%M:%S}")
-
-
 def render_kpis(df: pd.DataFrame) -> None:
-    total_detections = len(df)
-    unique_species = df["display_name"].nunique() if not df.empty else 0
-    locations = (
-        df[["latitude", "longitude"]]
-        .dropna()
-        .drop_duplicates()
-        .shape[0]
-        if not df.empty
-        else 0
-    )
-    avg_confidence = df["confidence"].mean() if not df.empty else 0.0
+    detections = len(df)
+    species = df["display_name"].nunique() if not df.empty else 0
+    stations = df["station"].nunique() if not df.empty else 0
+    latest = df["event_time"].max() if not df.empty else None
 
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Detections", total_detections)
-    col2.metric("Species", unique_species)
-    col3.metric("Locations", locations)
-    col4.metric("Avg confidence", f"{avg_confidence:.2f}")
+
+    col1.metric("Detections", detections)
+    col2.metric("Species", species)
+    col3.metric("Stations", stations)
+
+    if latest is not None and pd.notna(latest):
+        col4.metric("Latest detection", latest.strftime("%Y-%m-%d %H:%M"))
+    else:
+        col4.metric("Latest detection", "None")
 
 
 def calculate_zoom(df: pd.DataFrame) -> int:
+    if len(df) <= 1:
+        return 10
+
     lat_range = df["latitude"].max() - df["latitude"].min()
     lon_range = df["longitude"].max() - df["longitude"].min()
     max_range = max(lat_range, lon_range)
@@ -183,145 +163,215 @@ def calculate_zoom(df: pd.DataFrame) -> int:
     return 10
 
 
-def render_map(df: pd.DataFrame) -> None:
-    st.subheader("Detection Map")
+def build_station_summary(df: pd.DataFrame) -> pd.DataFrame:
+    return (
+        df.dropna(subset=["latitude", "longitude"])
+        .groupby("station")
+        .agg(
+            latitude=("latitude", "mean"),
+            longitude=("longitude", "mean"),
+            detections=("id", "count"),
+            species=("display_name", "nunique"),
+            latest_detection=("event_time", "max"),
+        )
+        .reset_index()
+    )
 
-    map_df = df.dropna(subset=["latitude", "longitude"])
+
+def render_map(df: pd.DataFrame) -> None:
+    map_df = df.dropna(subset=["latitude", "longitude"]).copy()
 
     if map_df.empty:
         st.info("No GPS coordinates available for the current selection.")
         return
 
+    map_df["latitude"] = map_df["latitude"].astype(float)
+    map_df["longitude"] = map_df["longitude"].astype(float)
+    map_df["confidence"] = map_df["confidence"].astype(float)
+    map_df["event_time"] = map_df["event_time"].astype(str)
+
+    station_df = build_station_summary(map_df)
+
     center_lat = map_df["latitude"].mean()
     center_lon = map_df["longitude"].mean()
-    zoom = calculate_zoom(map_df)
 
     heatmap_layer = pdk.Layer(
         "HeatmapLayer",
-        data=map_df,
+        data=station_df,
         get_position="[longitude, latitude]",
-        get_weight="confidence",
-        radiusPixels=35,
+        get_weight="detections",
+        radiusPixels=80,
     )
 
-    point_layer = pdk.Layer(
+    station_layer = pdk.Layer(
         "ScatterplotLayer",
-        data=map_df,
+        data=station_df,
         get_position="[longitude, latitude]",
-        get_radius=200,
-        get_fill_color="[30, 120, 180, 120]",
+        radius_units="pixels",
+        get_radius=12,
+        get_fill_color=[255, 255, 255, 0],
+        get_line_color=[255, 255, 255, 0],
         pickable=True,
     )
 
-    tooltip = {
-        "html": (
-            "<b>{display_name}</b><br/>"
-            "Confidence: {confidence}<br/>"
-            "Time: {event_time}"
-        )
-    }
-
     deck = pdk.Deck(
-        layers=[heatmap_layer, point_layer],
+        layers=[heatmap_layer, station_layer],
         initial_view_state=pdk.ViewState(
             latitude=center_lat,
             longitude=center_lon,
-            zoom=zoom,
+            zoom=calculate_zoom(map_df),
+            pitch=0,
         ),
-        tooltip=tooltip,
+        tooltip={
+            "html": (
+                "<b>Station {station}</b><br/>"
+                "Detections: {detections}<br/>"
+                "Species: {species}<br/>"
+                "Latest: {latest_detection}"
+            )
+        }, # type: ignore[arg-type]
     )
 
     st.pydeck_chart(deck, use_container_width=True)
 
 
-def render_charts(df: pd.DataFrame) -> None:
-    left, right = st.columns(2)
+def render_overview_tab(df: pd.DataFrame) -> None:
+    render_kpis(df)
 
-    with left:
-        st.subheader("Detections Over Time")
-        if df.empty or df["event_time"].isna().all():
-            st.info("No time-series data available.")
-        else:
-            time_series = (
-                df.set_index("event_time")
-                .sort_index()
-                .resample("1h")
-                .size()
-            )
-            st.line_chart(time_series)
+    st.subheader("Detection Map")
+    render_map(df)
 
-    with right:
-        st.subheader("Top Species")
-        species_counts = df["display_name"].value_counts().head(10)
-        if species_counts.empty:
-            st.info("No species data available.")
-        else:
-            st.bar_chart(species_counts)
-
-    left, right = st.columns(2)
-
-    with left:
-        st.subheader("Activity by Hour")
-        if df.empty or df["event_time"].isna().all():
-            st.info("No hourly data available.")
-        else:
-            hourly_counts = df.assign(hour=df["event_time"].dt.hour).groupby("hour").size()
-            st.bar_chart(hourly_counts)
-
-    with right:
-        st.subheader("Confidence Distribution")
-        if df.empty:
-            st.info("No confidence data available.")
-        else:
-            fig, ax = plt.subplots()
-            ax.hist(df["confidence"].dropna(), bins=10)
-            ax.set_xlabel("Confidence")
-            ax.set_ylabel("Detections")
-            st.pyplot(fig)
-
-
-def render_detection_table(df: pd.DataFrame) -> None:
     st.subheader("Recent Detections")
 
     if df.empty:
-        st.info("No detections match the selected filters.")
+        st.info("No detections match the current filters.")
         return
 
-    columns = [
-        "event_time",
-        "display_name",
-        "species",
-        "confidence",
-        "call_duration",
-        "latitude",
-        "longitude",
-    ]
-
     st.dataframe(
-        df[columns].sort_values("event_time", ascending=False),
+        df[
+            [
+                "event_time",
+                "display_name",
+                "species",
+                "confidence",
+                "call_duration",
+                "station",
+            ]
+        ].sort_values("event_time", ascending=False).head(25),
         use_container_width=True,
         hide_index=True,
     )
 
 
-def main() -> None:
-    df = prepare_data(load_detections())
+def render_species_tab(df: pd.DataFrame) -> None:
+    st.subheader("Species Summary")
 
-    render_header(df)
+    if df.empty:
+        st.info("No species data available.")
+        return
+
+    species_summary = (
+        df.groupby("display_name")
+        .agg(
+            detections=("id", "count"),
+            avg_confidence=("confidence", "mean"),
+            first_detection=("event_time", "min"),
+            last_detection=("event_time", "max"),
+        )
+        .sort_values("detections", ascending=False)
+        .reset_index()
+    )
+
+    st.dataframe(species_summary, use_container_width=True, hide_index=True)
+
+    st.subheader("Top species")
+    st.bar_chart(df["display_name"].value_counts().head(15))
+
+    st.subheader("Activity by hour")
+    hourly = df.assign(hour=df["event_time"].dt.hour).groupby("hour").size()
+    st.bar_chart(hourly)
+
+
+def render_stations_tab(df: pd.DataFrame) -> None:
+    st.subheader("Station Summary")
+
+    if df.empty:
+        st.info("No station data available.")
+        return
+
+    station_summary = build_station_summary(df)
+
+    if station_summary.empty:
+        st.info("No station coordinates available.")
+        return
+
+    station_summary = station_summary.sort_values(
+        "latest_detection",
+        ascending=False,
+    )
+
+    station_summary = station_summary.rename(
+        columns={
+            "station": "Station",
+            "detections": "Detections",
+            "species": "Species",
+            "latest_detection": "Latest Detection",
+            "latitude": "Latitude",
+            "longitude": "Longitude",
+        }
+    )
+
+    st.dataframe(
+        station_summary,
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
+def render_system_tab(df: pd.DataFrame) -> None:
+    st.subheader("System status")
+
+    if df.empty:
+        st.warning("No detections found.")
+        return
+
+    latest_detection = df["event_time"].max()
+    age = pd.Timestamp.now(tz=latest_detection.tz) - latest_detection
+
+    if age > pd.Timedelta(hours=6):
+        st.warning(f"No detections in {age}. Check recorder, microphone, or schedule.")
+    else:
+        st.success("Recent detections available.")
+
+    st.write("Latest detection:", latest_detection)
+    st.write("Total database rows loaded:", len(df))
 
     with st.expander("Raw data"):
         st.dataframe(df, use_container_width=True)
 
+
+def main() -> None:
+    st.title("Avian Acoustic Monitoring")
+
+    df = prepare_data(load_detections())
     filters = render_sidebar(df)
     filtered_df = apply_filters(df, filters)
 
-    if filtered_df.empty:
-        st.warning("No detections match the selected filters.")
+    overview_tab, species_tab, stations_tab, system_tab = st.tabs(
+        ["Overview", "Species", "Stations", "System"]
+    )
 
-    render_kpis(filtered_df)
-    render_map(filtered_df)
-    render_charts(filtered_df)
-    render_detection_table(filtered_df)
+    with overview_tab:
+        render_overview_tab(filtered_df)
+
+    with species_tab:
+        render_species_tab(filtered_df)
+
+    with stations_tab:
+        render_stations_tab(filtered_df)
+
+    with system_tab:
+        render_system_tab(df)
 
 
 if __name__ == "__main__":
