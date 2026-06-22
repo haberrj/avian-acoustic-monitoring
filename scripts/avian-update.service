@@ -1,0 +1,6 @@
+[Unit]
+Description=Update Avian Recorder
+
+[Service]
+Type=oneshot
+ExecStart=/home/birdpi/avian-acoustic-monitoring/scripts/update_and_rebuild.sh

@@ -1,4 +1,22 @@
 services:
+  recorder:
+    build:
+      context: .
+      dockerfile: src/Dockerfile
+    container_name: avian_recorder
+    env_file:
+      - .env
+    devices:
+      - /dev/snd:/dev/snd
+    group_add:
+      - audio
+    volumes:
+      - ./recordings:/app/recordings
+      - ./debug_recordings:/app/debug_recordings
+      - ./logs:/app/logs
+    restart: "no"
+    command: ["python", "-m", "src.pipeline"]
+
   db:
     image: postgres:15
     container_name: acoustic_db

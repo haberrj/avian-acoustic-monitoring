@@ -1,0 +1,7 @@
+[Unit]
+Description=Avian Acoustic Monitoring Recorder
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/birdpi/avian-acoustic-monitoring
+ExecStart=/usr/bin/docker compose run --rm recorder
