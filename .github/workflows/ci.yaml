@@ -3,7 +3,8 @@ name: CI
 on:
   # push:
   #   branches: ["main", "deploy"]
-  pull_request:
+  # pull_request:
+  workflow_dispatch:
 
 jobs:
   test:
