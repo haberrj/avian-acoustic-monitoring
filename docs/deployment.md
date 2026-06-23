@@ -28,10 +28,15 @@ Update configuration values as required.
 
 ## Start Core Services
 
-Build and start long-running services:
+Pull the Docker Image from dockerhub:
+```bash
+docker pull
+```
+
+Start long-running services:
 
 ```bash
-docker compose up -d --build db dashboard cloudflared
+docker compose up -d db dashboard cloudflared
 ```
 
 Run database migrations:
@@ -43,8 +48,9 @@ docker compose --profile jobs run --rm migrate
 ## Install System Services
 
 ```bash
-chmod +x scripts/*.sh
-./scripts/setup_system.sh
+crontab -e
+*/3 * * * * cd /home/user/avian-acoustic-monitoring && /usr/bin/docker compose --profile jobs run --rm recorder >> /home/user/avian-acoustic-monitoring/logs/recorder.log 2>&1
+0 3 * * * cd /home/user/avian-acoustic-monitoring && git pull && docker compose pull >> /home/user/avian-acoustic-monitoring/logs/update.log 2>&1
 ```
 
 This installs the systemd services and timers required for scheduled recording and update operations.
@@ -57,14 +63,9 @@ Check running containers:
 docker ps
 ```
 
-Check timers:
+Check cron jobs:
 
 ```bash
-systemctl list-timers
-```
-
-Check recorder logs:
-
-```bash
-journalctl -u avian-recorder
+crontab -l
+systemctl status cron
 ```
