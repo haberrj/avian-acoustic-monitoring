@@ -72,4 +72,4 @@ Long-running services:
 Scheduled services:
 
 * Audio Recording Pipeline
-* System Update Tasks
+* Cron-Scheduled Update Task and Logging

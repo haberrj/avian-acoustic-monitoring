@@ -3,20 +3,20 @@
 ## View Recorder Logs
 
 ```bash
-journalctl -u avian-recorder -f
+tail -f /home/user/avian-acoustic-monitoring/logs/recorder.log
 ```
 
 ## View Update Logs
 
 ```bash
-journalctl -u avian-update -f
+tail -f /home/user/avian-acoustic-monitoring/logs/update.log
 ```
 
-## Check Timer Status
+## Check Cron Status
 
 ```bash
-systemctl status avian-recorder.timer
-systemctl status avian-update.timer
+crontab -l
+systemctl status cron
 ```
 
 ## Run Recording Manually
@@ -31,10 +31,10 @@ docker compose --profile jobs run --rm recorder
 docker compose --profile jobs run --rm migrate
 ```
 
-## Rebuild Containers
+## Pull Images
 
 ```bash
-docker compose build
+docker compose pull
 ```
 
 ## Restart Dashboard
@@ -46,7 +46,7 @@ docker compose restart dashboard
 ## Verify Database Connectivity
 
 ```bash
-docker compose exec db psql -U postgres
+docker compose exec db psql -U acoustic_user -d acoustic_monitor
 ```
 
 ## Update Application

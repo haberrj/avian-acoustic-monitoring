@@ -16,7 +16,7 @@ jobs:
 
       - uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - uses: docker/build-push-action@v6
@@ -25,5 +25,5 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: |
-            haberrj/avian-acoustic-monitoring:latest
-            haberrj/avian-acoustic-monitoring:${{ github.sha }}
+            ${{ vars.DOCKERHUB_USERNAME }}/avian-acoustic-monitoring:latest
+            ${{ vars.DOCKERHUB_USERNAME }}/avian-acoustic-monitoring:${{ github.sha }}

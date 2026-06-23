@@ -18,12 +18,13 @@ def run_pipeline():
         "lon": float(os.getenv("STATION_LONGITUDE", "0.0"))
     }
 
+    threshold = float(os.getenv("BIRD_CONFIDENCE_THRESHOLD", "0.2"))
     try:
         # Run BirdNET
         analyzer = BirdNetAudio(gps_coords, file_path)
 
         # Filter detections
-        detections = analyzer.filter_detections(threshold=0.2)
+        detections = analyzer.filter_detections(threshold=threshold)
 
         if not detections:
             print("No valid detections. Deleting recording.")
