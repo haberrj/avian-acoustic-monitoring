@@ -2,8 +2,10 @@ services:
   recorder:
     profiles:
       - jobs
-    build: .
+    image: haberrj/avian-acoustic-monitoring:latest
     container_name: avian_recorder
+    environment:
+      - POSTGRES_HOST=db
     env_file:
       - .env
     devices:
@@ -34,7 +36,7 @@ services:
       - jobs
     environment:
       - POSTGRES_HOST=db
-    build: .
+    image: haberrj/avian-acoustic-monitoring:latest
     depends_on:
       - db
     env_file:
@@ -44,7 +46,7 @@ services:
   dashboard:
     environment:
       - POSTGRES_HOST=db
-    build: .
+    image: haberrj/avian-acoustic-monitoring:latest
     depends_on:
       - db
     env_file:
