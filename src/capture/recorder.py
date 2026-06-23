@@ -35,7 +35,8 @@ class AudioRecorder:
         return filename
 
 
-if __name__ == "__main__":
-    audio_rec = AudioRecorder('some/path/tobeadded/with/args', 44100)
-    recording = audio_rec.record_audio(30)
-    print("Recording,", recording, ", capurted!")
+# if __name__ == "__main__":
+#     recordings_dir = os.getenv("RECORDINGS_DIR", "/app/recordings")
+#     audio_rec = AudioRecorder(recordings_dir, 44100)
+#     recording = audio_rec.record_audio(30)
+#     print("Recording,", recording, ", captured!")
