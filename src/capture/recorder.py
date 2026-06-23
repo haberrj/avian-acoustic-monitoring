@@ -21,12 +21,14 @@ class AudioRecorder:
 
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         filename = os.path.join(self.output_dir, f"recording_{timestamp}.wav")
+        device = int(os.getenv("AUDIO_DEVICE", "1"))
 
         audio_data = sd.rec(
             int(duration_seconds * self.sample_rate),
             samplerate=self.sample_rate,
             channels=1,  # mono is enough
-            dtype="int16"
+            dtype="int16",
+            device=device
         )
 
         sd.wait()  # wait until recording is finished
