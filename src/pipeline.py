@@ -9,12 +9,13 @@ def run_pipeline():
     print("Starting pipeline...")
 
     # Record audio
-    audio_recorder = AudioRecorder('temp', 44100)  # Will change this eventually to 32 kHz for energy saving
+    recordings_dir = os.getenv("RECORDINGS_DIR", "/app/recordings")
+    audio_recorder = AudioRecorder(recordings_dir, 44100)  # Will change this eventually to 32 kHz for energy saving
     file_path= audio_recorder.record_audio(30)
 
     gps_coords = {
-        "lat": 48.746,
-        "lon": 11.463
+        "lat": float(os.getenv("STATION_LATITUDE", "0.0")),
+        "lon": float(os.getenv("STATION_LONGITUDE", "0.0"))
     }
 
     try:
