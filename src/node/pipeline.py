@@ -32,7 +32,9 @@ def run_pipeline():
             return
 
         # Write to database
+        print("Building upload payload...")
         payload = build_detection_payload(detections, file_path)
+        print("Payload built successfully")
         upload_detection_payload(payload)
         print(f"Uploaded {len(detections)} detections.")
 

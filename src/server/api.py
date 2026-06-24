@@ -23,6 +23,9 @@ def create_detection_payload(
 
     if not payload.detections:
         return DetectionUploadResponse(status="ok", inserted=0)
+    print("Received payload")
+    print(payload.model_dump())
+    print(f"Authorization header present: {authorization is not None}")
 
     insert_detection_payload(payload.model_dump())
 
