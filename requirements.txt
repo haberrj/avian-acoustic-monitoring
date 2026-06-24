@@ -11,3 +11,4 @@ streamlit
 matplotlib
 streamlit-autorefresh
 alembic
+fastapi

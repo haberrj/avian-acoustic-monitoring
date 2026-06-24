@@ -1,7 +1,7 @@
 import os
 
-from src.capture.recorder import AudioRecorder
-from src.detection.birdnet import BirdNetAudio
+from src.node.capture.recorder import AudioRecorder
+from src.node.detection.birdnet import BirdNetAudio
 from src.storage.crud import insert_detections
 
 
