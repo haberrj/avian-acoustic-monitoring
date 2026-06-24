@@ -4,16 +4,14 @@ services:
       - jobs
     image: haberrj/avian-acoustic-monitoring:latest
     container_name: avian_recorder
-    environment:
-      - POSTGRES_HOST=db
     env_file:
-      - .env
+      - ../.env
     devices:
       - /dev/snd:/dev/snd
     group_add:
       - audio
     volumes:
-      - ./recordings:/app/recordings
-      - ./logs:/app/logs
+      - ../recordings:/app/recordings
+      - ../logs:/app/logs
     restart: "no"
-    command: ["python", "-m", "src/node/pipeline.py"]
+    command: ["python", "src/node/pipeline.py"]
