@@ -14,6 +14,8 @@ services:
     image: haberrj/avian-acoustic-monitoring:latest
     env_file:
       - ../.env
+    environment:
+      - POSTGRES_HOST=db
     command: ["uvicorn", "src.server.api:app", "--host", "0.0.0.0", "--port", "8000"]
     depends_on:
       - db
