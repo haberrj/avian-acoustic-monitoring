@@ -14,7 +14,7 @@ services:
     image: haberrj/avian-acoustic-monitoring:latest
     env_file:
       - .env
-    command: ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    command: ["uvicorn", "src.server.api:app", "--host", "0.0.0.0", "--port", "8000"]
     depends_on:
       - db
     ports:

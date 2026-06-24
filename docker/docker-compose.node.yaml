@@ -16,4 +16,4 @@ services:
       - ./recordings:/app/recordings
       - ./logs:/app/logs
     restart: "no"
-    command: ["python", "-m", "src.pipeline"]
+    command: ["python", "-m", "src/node/pipeline.py"]

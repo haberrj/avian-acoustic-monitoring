@@ -12,3 +12,5 @@ matplotlib
 streamlit-autorefresh
 alembic
 fastapi
+uvicorn
+requests
