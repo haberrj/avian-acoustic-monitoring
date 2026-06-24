@@ -1,6 +1,8 @@
+name: Build & Publish Docker Images
+
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "develop"]
   workflow_dispatch:
 
 jobs:
@@ -22,7 +24,7 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/arm64, linux/amd64
+          platforms: linux/arm64,linux/amd64
           push: true
           tags: |
             ${{ vars.DOCKERHUB_USERNAME }}/avian-acoustic-monitoring:latest
