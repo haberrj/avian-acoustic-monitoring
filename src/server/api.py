@@ -1,18 +1,18 @@
 import os
-from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException
 
+from src.server.schemas.schemas import DetectionUploadPayload, DetectionUploadResponse
 from src.storage.crud import insert_detection_payload
 
-app = FastAPI()
+app = FastAPI(title="Avian Acoustic Monitoring API")
 
 
-@app.post("/detections/")
+@app.post("/detections/", response_model=DetectionUploadResponse)
 def create_detection_payload(
-    payload: dict[str, Any],
+    payload: DetectionUploadPayload,
     authorization: str | None = Header(default=None),
-) -> dict[str, Any]:
+) -> DetectionUploadResponse:
     expected_token = os.getenv("INGESTION_API_TOKEN")
 
     if not expected_token:
@@ -21,11 +21,9 @@ def create_detection_payload(
     if authorization != f"Bearer {expected_token}":
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    detections = payload.get("detections", [])
+    if not payload.detections:
+        return DetectionUploadResponse(status="ok", inserted=0)
 
-    if not detections:
-        return {"status": "ok", "inserted": 0}
+    insert_detection_payload(payload.model_dump())
 
-    insert_detection_payload(payload)
-
-    return {"status": "ok", "inserted": len(detections)}
+    return DetectionUploadResponse(status="ok", inserted=len(payload.detections))
