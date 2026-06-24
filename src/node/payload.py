@@ -17,6 +17,7 @@ def build_detection_payload(
     """Build the upload payload sent from an RPi node to the server API."""
     return {
         "station": {
+            "station_id": os.getenv("STATION_ID", "Default-Station"),
             "name": os.getenv("STATION_NAME", "Default Station"),
             "description": os.getenv("STATION_DESCRIPTION"),
             "country": os.getenv("STATION_COUNTRY"),
