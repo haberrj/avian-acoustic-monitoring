@@ -12,7 +12,7 @@ def get_cpu_temp_c() -> float | None:
     try:
         out = subprocess.check_output(["vcgencmd", "measure_temp"], text=True)
         return float(out.split("=")[1].split("'")[0])
-    except Exception:
+    except (subprocess.SubprocessError, FileNotFoundError, ValueError, IndexError):
         return None
 
 
@@ -22,7 +22,7 @@ def get_wifi_signal_dbm() -> float | None:
         for line in out.splitlines():
             if "signal:" in line:
                 return float(line.split("signal:")[1].split()[0])
-    except Exception:
+    except (subprocess.SubprocessError, FileNotFoundError, ValueError, IndexError):
         return None
 
 
