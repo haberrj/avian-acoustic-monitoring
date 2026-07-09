@@ -24,6 +24,7 @@ def build_detection_payload(
             "region": os.getenv("STATION_REGION"),
             "latitude": float(os.getenv("STATION_LATITUDE", "0.0")),
             "longitude": float(os.getenv("STATION_LONGITUDE", "0.0")),
+            "timezone": os.getenv("STATION_TIMEZONE"),
         },
         "recording": {
             "path": recording_path,

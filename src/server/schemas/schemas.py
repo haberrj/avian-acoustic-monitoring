@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
+from datetime import datetime
 
 
 class StationPayload(BaseModel):
@@ -9,6 +10,7 @@ class StationPayload(BaseModel):
     region: str | None = Field(default=None, examples=["Region"])
     latitude: float | None = Field(default=None, examples=[0.000])
     longitude: float | None = Field(default=None, examples=[0.000])
+    timezone: str | None = Field(default=None, examples=["Europe/Berlin"])
 
 
 class RecordingPayload(BaseModel):
@@ -36,3 +38,17 @@ class DetectionUploadPayload(BaseModel):
 class DetectionUploadResponse(BaseModel):
     status: str
     inserted: int
+
+class HeartbeatIn(BaseModel):
+    station_id: str
+    timestamp_utc: datetime
+    uptime_seconds: float | None = None
+    cpu_temp_c: float | None = None
+    memory_available_mb: float | None = None
+    disk_free_gb: float | None = None
+    wifi_signal_dbm: float | None = None
+    node_version: str | None = None
+
+
+class HeartbeatResponse(BaseModel):
+    status: str
