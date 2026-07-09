@@ -15,3 +15,14 @@ services:
       - ../logs:/app/logs
     restart: "no"
     command: ["python", "src/node/pipeline.py"]
+
+  heartbeat:
+    profiles:
+      - jobs
+    image: haberrj/avian-acoustic-monitoring:latest
+    env_file:
+      - ../.env
+    network_mode: host
+    privileged: true
+    restart: "no"
+    command: ["python", "-m", "src.node.heartbeat"]
