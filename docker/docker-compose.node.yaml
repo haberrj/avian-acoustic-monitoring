@@ -1,0 +1,28 @@
+services:
+  recorder:
+    profiles:
+      - jobs
+    image: haberrj/avian-acoustic-monitoring:latest
+    container_name: avian_recorder
+    env_file:
+      - ../.env
+    devices:
+      - /dev/snd:/dev/snd
+    group_add:
+      - audio
+    volumes:
+      - ../recordings:/app/recordings
+      - ../logs:/app/logs
+    restart: "no"
+    command: ["python", "-m", "src.node.pipeline"]
+
+  heartbeat:
+    profiles:
+      - jobs
+    image: haberrj/avian-acoustic-monitoring:latest
+    env_file:
+      - ../.env
+    network_mode: host
+    privileged: true
+    restart: "no"
+    command: ["python", "-m", "src.node.heartbeat"]

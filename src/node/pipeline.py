@@ -1,8 +1,9 @@
 import os
 
-from src.capture.recorder import AudioRecorder
-from src.detection.birdnet import BirdNetAudio
-from src.storage.crud import insert_detections
+from src.node.capture.recorder import AudioRecorder
+from src.node.detection.birdnet import BirdNetAudio
+from src.node.payload import build_detection_payload
+from src.node.uploader import upload_detection_payload
 
 
 def run_pipeline():
@@ -11,7 +12,7 @@ def run_pipeline():
     # Record audio
     recordings_dir = os.getenv("RECORDINGS_DIR", "/app/recordings")
     audio_recorder = AudioRecorder(recordings_dir, 44100)  # Will change this eventually to 32 kHz for energy saving
-    file_path = audio_recorder.record_audio(30)
+    file_path = audio_recorder.record_audio(60)
 
     gps_coords = {
         "lat": float(os.getenv("STATION_LATITUDE", "0.0")),
@@ -31,9 +32,11 @@ def run_pipeline():
             return
 
         # Write to database
-        insert_detections(detections)
-
-        print(f"Inserted {len(detections)} detections.")
+        print("Building upload payload...")
+        payload = build_detection_payload(detections, file_path)
+        print("Payload built successfully")
+        upload_detection_payload(payload)
+        print(f"Uploaded {len(detections)} detections.")
 
     finally:
         # Always delete recording post processing unless debugging

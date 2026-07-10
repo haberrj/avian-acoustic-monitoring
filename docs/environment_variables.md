@@ -1,63 +1,174 @@
-## Environment Variables
+# Environment Variables
 
-The application is configured through a `.env` file.
+## Overview
+
+Avian Acoustic Monitoring uses environment variables to configure both the server and recording nodes.
+
+Each deployment target has its own configuration file.
+
+| Component | Example File |
+|-----------|--------------|
+| Server | `.env.server.example` |
+| Recording Node | `.env.node.example` |
+
+The server and recording nodes are configured independently.
+
+---
+
+# Server Configuration
+
+The server requires database, authentication, and deployment configuration.
+
+## PostgreSQL
 
 | Variable | Description | Example |
-|-----------|-------------|---------|
-| `POSTGRES_DB` | PostgreSQL database name | `acoustic_monitor` |
-| `POSTGRES_USER` | PostgreSQL username | `acoustic_user` |
-| `POSTGRES_PASSWORD` | PostgreSQL password | `your_secure_password_here` |
-| `POSTGRES_HOST` | PostgreSQL hostname | `db` |
-| `POSTGRES_PORT` | PostgreSQL port | `5432` |
-| `AUDIO_SAMPLE_RATE` | Recording sample rate in Hz | `44100` |
-| `AUDIO_DEVICE` | Audio input device index inside the container | `1` |
-| `RECORD_DURATION_SECONDS` | Length of each audio recording in seconds | `30` |
-| `RECORDINGS_DIR` | Directory used for temporary recordings | `/app/recordings` |
-| `DEBUG_RECORDINGS_DIR` | Directory used to store recordings when debug mode is enabled | `/app/debug_recordings` |
-| `DEBUG` | Preserve recordings after processing (`0` = disabled, `1` = enabled) | `0` |
-| `BIRD_CONFIDENCE_THRESHOLD` | Minimum BirdNET confidence required to retain a detection | `0.7` |
-| `CLOUDFLARE_TUNNEL_TOKEN` | Cloudflare Tunnel authentication token | `xyz` |
-| `STATION_NAME` | Human-readable station name | `Station Name` |
-| `STATION_DESCRIPTION` | Description of the monitoring location | `Prototype deployment` |
-| `STATION_COUNTRY` | Country where the station is located | `Some Country` |
-| `STATION_REGION` | Region, state, or province | `Some Region` |
-| `STATION_LATITUDE` | Station latitude in decimal degrees | `1.12345678` |
-| `STATION_LONGITUDE` | Station longitude in decimal degrees | `1.12345678` |
+|----------|-------------|---------|
+| `POSTGRES_DB` | PostgreSQL database name. | `acoustic_monitor` |
+| `POSTGRES_USER` | PostgreSQL username. | `acoustic_user` |
+| `POSTGRES_PASSWORD` | PostgreSQL password. | `your_secure_password_here` |
+| `POSTGRES_HOST` | Database host. | `localhost` |
+| `POSTGRES_PORT` | Database port. | `5432` |
 
-### Example Configuration
+---
 
-```env
+## Cloudflare
+
+| Variable | Description |
+|----------|-------------|
+| `CLOUDFLARE_TUNNEL_TOKEN` | Token used by Cloudflare Tunnel to securely expose the API and dashboard. |
+
+---
+
+## API Authentication
+
+| Variable | Description |
+|----------|-------------|
+| `INGESTION_API_TOKEN` | Shared bearer token used by recording nodes when uploading detections and heartbeat information. |
+
+> **Note**
+>
+> Per-node authentication is planned for a future release. The current implementation uses a shared ingestion token.
+
+---
+
+## Environment
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `ENVIRONMENT` | Deployment environment. Primarily used to distinguish development and production deployments. | `development` |
+
+---
+
+# Recording Node Configuration
+
+Recording nodes require configuration for server communication, recording settings, BirdNET inference, and station metadata.
+
+---
+
+## API
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `API_URL` | URL of the server REST API. | `https://api.domain.com` |
+| `API_TOKEN` | Bearer token used when uploading detections and heartbeats. | `super-secret-token` |
+| `NODE_VERSION` | Software version reported through heartbeat monitoring. | `1.0.0` |
+
+---
+
+## Audio Processing
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `AUDIO_SAMPLE_RATE` | Recording sample rate in Hertz. | `44100` |
+| `AUDIO_DEVICE` | Input device index used by the recorder. | `1` |
+| `RECORD_DURATION_SECONDS` | Length of each recording. | `60` |
+| `RECORD_INTERVAL_SECONDS` | Time between recordings. | `600` |
+| `RECORDINGS_DIR` | Temporary recording directory. | `/app/recordings` |
+| `DEBUG_RECORDINGS_DIR` | Directory for preserved recordings when debug mode is enabled. | `/app/debug_recordings` |
+| `DEBUG` | Preserve recordings instead of deleting them. `0` = disabled, `1` = enabled. | `0` |
+
+---
+
+## BirdNET
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `BIRD_CONFIDENCE_THRESHOLD` | Minimum confidence required before a detection is uploaded. | `0.7` |
+
+---
+
+## Station Metadata
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `STATION_ID` | Unique identifier for the recording station. | `munich-1` |
+| `STATION_NAME` | Human-readable station name. | `Munich` |
+| `STATION_DESCRIPTION` | Optional description of the deployment site. | `Prototype installation` |
+| `STATION_COUNTRY` | Country where the station is located. | `Germany` |
+| `STATION_REGION` | Region or state. | `Bavaria` |
+| `STATION_LATITUDE` | Latitude in decimal degrees. | `48.137154` |
+| `STATION_LONGITUDE` | Longitude in decimal degrees. | `11.576124` |
+| `STATION_TIMEZONE` | IANA timezone used for dashboard display. | `Europe/Berlin` |
+
+---
+
+# Timezone Handling
+
+Recording nodes upload timestamps in UTC.
+
+The dashboard converts timestamps into the station's configured timezone using the value provided by `STATION_TIMEZONE`.
+
+Examples include:
+
+- `Europe/Berlin`
+- `America/Toronto`
+- `Africa/Johannesburg`
+
+Using IANA timezone names ensures daylight saving time is handled automatically.
+
+---
+
+# Typical Configuration
+
+## Server
+
+```text
 POSTGRES_DB=acoustic_monitor
 POSTGRES_USER=acoustic_user
-POSTGRES_PASSWORD=your_secure_password_here
-POSTGRES_HOST=db
+POSTGRES_PASSWORD=********
+POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 
-AUDIO_SAMPLE_RATE=44100
-AUDIO_DEVICE=1
-RECORD_DURATION_SECONDS=30
-RECORDINGS_DIR=/app/recordings
-DEBUG_RECORDINGS_DIR=/app/debug_recordings
-DEBUG=0
+INGESTION_API_TOKEN=********
 
-BIRD_CONFIDENCE_THRESHOLD=0.7
-
-CLOUDFLARE_TUNNEL_TOKEN=xyz
-
-STATION_NAME=Name of Station
-STATION_DESCRIPTION=Description
-STATION_COUNTRY=Country Name
-STATION_REGION=Region Name
-STATION_LATITUDE=1.12345678
-STATION_LONGITUDE=1.12345678
+ENVIRONMENT=production
 ```
 
-### Finding the Audio Device
+## Recording Node
 
-To list available audio devices inside the recorder container:
+```text
+API_URL=https://api.example.com
+API_TOKEN=********
 
-```bash
-docker compose run --rm recorder python -c "import sounddevice as sd; print(sd.query_devices())"
+NODE_VERSION=1.0.0
+
+RECORD_DURATION_SECONDS=60
+RECORD_INTERVAL_SECONDS=600
+
+STATION_ID=munich-1
+STATION_NAME=Munich
+STATION_TIMEZONE=Europe/Berlin
 ```
 
-Use the device index shown for `AUDIO_DEVICE`.
+---
+
+# Security
+
+Environment files contain sensitive configuration values and should **never** be committed to version control.
+
+Recommendations:
+
+- Keep production credentials outside the repository.
+- Rotate API tokens periodically.
+- Use unique credentials for each deployment.
+- Commit only `.env.example` files.

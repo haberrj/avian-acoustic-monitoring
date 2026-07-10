@@ -1,183 +1,302 @@
 # Avian Acoustic Monitoring
 
-Avian Acoustic Monitoring is a Raspberry Pi-based passive acoustic monitoring system designed to identify bird species using BirdNET and store detections for visualization and analysis.
+Avian Acoustic Monitoring is a distributed passive acoustic monitoring platform designed to identify bird vocalizations using BirdNET while requiring only low-cost hardware at the recording location.
 
-The project was developed as an exploration of low-cost wildlife monitoring using open-source software and commodity hardware.
+The project consists of two independent deployable components:
 
-## Features
+- **Server** – receives detections from recording nodes, stores them in PostgreSQL, and provides a web dashboard and REST API.
+- **Node** – a Raspberry Pi-based recording station that performs local BirdNET inference and uploads only detection metadata to the server.
 
-* Automated audio recording
-* BirdNET-based species identification
-* PostgreSQL-backed detection storage
-* Streamlit dashboard
-* Docker-based deployment
-* Automated scheduling via cron
-* Cloudflare Tunnel support for remote dashboard access
-* Multi-station architecture support
+Separating inference from storage allows multiple recording nodes to contribute to a single centralized dataset while keeping bandwidth requirements low and avoiding the transfer of raw audio.
 
-## Architecture
+---
 
-```text
-Audio Recorder
-      ↓
-   BirdNET
-      ↓
-Detection Filtering
-      ↓
- PostgreSQL
-      ↓
- Streamlit Dashboard
+# Why?
+
+Passive acoustic monitoring is becoming an increasingly important tool for understanding biodiversity and long-term changes in bird populations. While many existing monitoring systems rely on expensive commercial hardware or cloud-based processing, this project explores whether similar capabilities can be achieved using inexpensive commodity hardware and open-source software.
+
+The project was designed to answer several practical engineering questions:
+
+- Can BirdNET perform reliable on-device inference on low-cost Raspberry Pi hardware?
+- Can a distributed network of autonomous recording stations be managed through a centralized server?
+- Can environmental monitoring be performed while minimizing storage, bandwidth, and privacy concerns?
+- Can the entire system be deployed and maintained using reproducible Docker-based infrastructure?
+
+Rather than treating each recording station as an isolated device, the system is designed as a distributed platform where multiple nodes contribute detections to a single centralized database. This architecture simplifies deployment, enables long-term monitoring across multiple geographic locations, and provides a single interface for visualization and analysis.
+
+The long-term goal is to build a scalable, privacy-conscious, and reproducible platform for passive acoustic biodiversity monitoring that can be deployed by researchers, conservation organizations, or hobbyists using affordable hardware.
+
+---
+
+# System Architecture
+
+```
+                            +--------------------------------+
+                            |            Server              |
+                            |--------------------------------|
+                            | FastAPI REST API              |
+                            | PostgreSQL                    |
+                            | Streamlit Dashboard           |
+                            | Alembic Migrations            |
+                            | Cloudflare Tunnel             |
+                            +---------------+---------------+
+                                            ^
+                                            |
+                                      HTTPS REST API
+                                            |
+          +---------------------------------+---------------------------------+
+          |                                 |                                 |
+          |                                 |                                 |
++---------+---------+             +---------+---------+             +---------+---------+
+| Raspberry Pi Node |             | Raspberry Pi Node |             | Raspberry Pi Node |
++-------------------+             +-------------------+             +-------------------+
+| Audio Recording   |             | Audio Recording   |             | Audio Recording   |
+| BirdNET Inference |             | BirdNET Inference |             | BirdNET Inference |
+| Detection Upload  |             | Detection Upload  |             | Detection Upload  |
+| Heartbeat Upload  |             | Heartbeat Upload  |             | Heartbeat Upload  |
++-------------------+             +-------------------+             +-------------------+
 ```
 
-Audio recordings are analyzed locally on a Raspberry Pi. Detection metadata is stored in PostgreSQL and exposed through a Streamlit dashboard.
+The server has no dependency on BirdNET and performs no audio processing. This separation keeps the server lightweight, allows recording nodes to operate independently, and significantly reduces network bandwidth by transmitting only detection metadata rather than raw audio.
 
-By default, raw audio recordings are deleted after processing. Debug mode can optionally preserve recordings for troubleshooting and validation.
+All inference occurs on the recording nodes.
 
-## Hardware
+---
 
-The prototype hardware currently consists of:
+# Design Goals
 
-* Raspberry Pi 4 (4 GB)
-* USB microphone
-* MicroSD card
-* Network connection (Wi-Fi or Ethernet)
+The project was designed around several principles.
 
-## Quick Start
+- Perform inference at the edge.
+- Centralize storage and visualization.
+- Minimize bandwidth usage.
+- Avoid long-term storage of environmental audio.
+- Support multiple recording stations.
+- Keep deployments reproducible using Docker.
 
-Clone the repository:
+---
 
-```bash
-git clone https://github.com/haberrj/avian-acoustic-monitoring.git
-cd avian-acoustic-monitoring
+# Components
+
+## Server
+
+The server provides the central services required by all recording nodes.
+
+Responsibilities include:
+
+- FastAPI REST API
+- PostgreSQL database
+- Streamlit dashboard
+- Database migrations
+- Alembic database migrations
+- Station management
+- Heartbeat monitoring
+- Detection storage
+
+The server is intended to remain online continuously.
+
+---
+
+## Recording Node
+
+Each recording node is designed to operate independently.
+
+Responsibilities include:
+
+- Scheduled audio recording
+- BirdNET inference
+- Detection filtering
+- Uploading detections
+- Uploading heartbeat information
+
+Nodes require only network connectivity to communicate with the server.
+
+Additional recording stations can be deployed without modifying the server architecture.
+
+---
+
+# Processing Pipeline
+
+For every scheduled recording, the following pipeline is executed.
+
+```
+Record Audio
+      │
+      ▼
+BirdNET Analysis
+      │
+      ▼
+Filter by Confidence Threshold
+      │
+      ▼
+Extract Detection Metadata
+      │
+      ▼
+Upload to Server
+      │
+      ▼
+Delete Recording
 ```
 
-Create the environment file:
+Only detection metadata is uploaded during normal operation.
+The system stores timestamps internally in UTC while presenting data in each station's local timezone.
 
-```bash
-cp .env.example .env
+---
+
+# Dashboard
+
+The Streamlit dashboard provides access to the centralized dataset.
+
+Current functionality includes:
+
+- Detection overview
+- Detection map
+- Species summaries
+- Monthly detection statistics
+- Station health monitoring
+- Node heartbeat monitoring
+- Confidence filtering
+- Station filtering
+- Species filtering
+- Station filtering
+- Local timezone display
+
+---
+
+# Technology Stack
+
+| Component | Technology |
+|------------|------------|
+| Programming Language | Python |
+| Acoustic Classification | BirdNET |
+| API | FastAPI |
+| Database | PostgreSQL |
+| ORM | SQLAlchemy |
+| Migrations | Alembic |
+| Dashboard | Streamlit |
+| Containers | Docker |
+| Reverse Proxy | Cloudflare Tunnel |
+| CI | GitHub Actions |
+| Linting | Ruff |
+| Testing | Pytest |
+
+---
+
+# Repository Structure
+
+```
+src/
+├── node/
+│   ├── recorder
+│   ├── heartbeat
+│   └── upload
+│
+├── server/
+│   ├── api
+│   ├── schemas
+│   └── authentication
+│
+├── storage/
+│   ├── models
+│   ├── crud
+│   └── database
+│
+dashboard/
+│
+docker/
+│
+migrations/
+│
+docs/
 ```
 
-Review and update the station configuration:
+---
 
-```env
-STATION_NAME=Name of Station
-STATION_DESCRIPTION=Description
-STATION_COUNTRY=Country Name
-STATION_REGION=Region Name
-STATION_LATITUDE=1.12345678
-STATION_LONGITUDE=1.12345678
-```
+# Data Model
 
-Start the database:
+The server stores three primary entities:
 
-```bash
-docker compose up -d db
-```
+- Stations
+- Detections
+- Node Heartbeats
 
-Run database migrations:
+Detections are linked to the recording station that produced them, allowing observations from multiple geographic locations to be analyzed through a single centralized database.
 
-```bash
-docker compose --profile jobs run --rm migrate
-```
+---
 
-Start the dashboard and Cloudflare tunnel:
+# Deployment
 
-```bash
-docker compose up -d dashboard cloudflared
-```
+The repository contains Docker Compose configurations for both deployment targets.
 
-## Scheduling
+## Server
 
-The recorder is designed to run periodically using cron.
+The server deployment includes:
 
-Example:
+- FastAPI
+- PostgreSQL
+- Streamlit
+- Cloudflare Tunnel
 
-```bash
-*/3 * * * * cd /home/user/avian-acoustic-monitoring && /usr/bin/docker compose --profile jobs run --rm recorder >> /home/user/avian-acoustic-monitoring/logs/recorder.log 2>&1
-0 3 * * * cd /home/user/avian-acoustic-monitoring && git pull && docker compose pull >> /home/user/avian-acoustic-monitoring/logs/update.log 2>&1
-```
+Database schema changes are managed using Alembic migrations.
 
-Verify cron jobs:
+## Node
 
-```bash
-crontab -l
-```
+Each recording node runs independently and periodically executes:
 
-Verify cron service:
+- Audio recording
+- BirdNET inference
+- Detection upload
+- Heartbeat upload
 
-```bash
-systemctl status cron
-```
+The same Docker image can be deployed to any number of recording stations.
 
-If the service is not able to run properly, please ensure the user has write access to the repo directory.
+---
 
-```bash
-sudo chown -R user:hostname /path/to/repo 
-```
+# Documentation
 
-## Database Migrations
+Additional documentation is available in the `docs` directory.
 
-Schema changes are managed with Alembic.
+| Document | Description |
+|----------|-------------|
+| api.md | API usage and architecture |
+| architecture.md | Overall system architecture |
+| database.md | Database structure and considerations |
+| deployment.md | Server and node deployment |
+| design_decisions.md | Design decisions |
+| development.md | Development workflow |
+| environment_variables.md | Configuration reference |
+| hardware.md | Hardware recommendations |
+| operations.md | Operational procedures |
+| privacy.md | Privacy considerations |
+| testing.md | System and integration test concepts |
 
-Generate a migration:
 
-```bash
-alembic revision --autogenerate -m "description"
-```
+---
 
-Apply migrations:
+# Current Status
 
-```bash
-docker compose --profile jobs run --rm migrate
-```
+Implemented
 
-## Cloudflare Access
+- Distributed client-server architecture
+- Docker-based deployment
+- FastAPI ingestion API
+- PostgreSQL backend
+- Streamlit dashboard
+- Heartbeat monitoring
+- Station management
+- Local timezone support
+- Monthly detection summaries
+- Automatic database migrations
 
-The dashboard can be exposed securely through Cloudflare Tunnel and protected using Cloudflare Access authentication.
+Planned
 
-Typical deployment:
+- Per-node authentication
+- Additional ecological analytics
+- Multi-region deployments
+- Long-term seasonal analysis
 
-```text
-Internet
-    ↓
-Cloudflare Access
-    ↓
-Cloudflare Tunnel
-    ↓
-Streamlit Dashboard
-```
+---
 
-## Documentation
+# License
 
-Additional documentation is available in the `docs` directory:
-
-* architecture.md
-* deployment.md
-* development.md
-* operations.md
-* privacy.md
-* challenges.md
-* hardware.md
-
-## Project Status
-
-This project is under active development and should currently be considered experimental.
-
-Current capabilities:
-
-* Automated recording
-* BirdNET inference
-* PostgreSQL storage
-* Dashboard visualization
-* Remote access through Cloudflare
-
-Planned improvements:
-
-* Additional station deployments
-* Centralized multi-node collection
-* Health monitoring and station heartbeats
-* Solar-powered field deployment
-
-## License
-
-MIT License
+Licensed under the MIT License.

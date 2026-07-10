@@ -219,3 +219,6 @@ __marimo__/
 
 # env files
 .env
+
+# DS Store
+.DS_Store
