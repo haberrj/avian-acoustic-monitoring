@@ -1,71 +1,278 @@
 # Deployment
 
-## Requirements
+## Overview
 
-* Raspberry Pi 4 or newer
-* Raspberry Pi OS Lite (64-bit)
-* Docker
-* Docker Compose
-* USB microphone
-* Internet connectivity
+Avian Acoustic Monitoring is deployed as two independent components:
 
-## Initial Setup
+- **Server** – hosts the REST API, PostgreSQL database, Streamlit dashboard, and supporting infrastructure.
+- **Recording Node** – Raspberry Pi-based recording station responsible for audio recording, BirdNET inference, and uploading detections.
 
-Clone the repository:
+The server and recording nodes are deployed independently. A single server can support one or many recording nodes.
 
-```bash
-git clone <repository-url>
-cd avian-acoustic-monitoring
-```
+---
 
-Create the environment file:
+# Server Deployment
 
-```bash
-cp .env.example .env
-```
+## Components
 
-Update configuration values as required.
+The server deployment consists of the following services:
 
-## Start Core Services
+| Service | Purpose |
+|----------|---------|
+| PostgreSQL | Stores stations, detections, and heartbeat information |
+| FastAPI | REST API for detections and heartbeat uploads |
+| Streamlit | Dashboard for visualization and monitoring |
+| Cloudflare Tunnel | Secure remote access |
+| Alembic | Database schema migrations |
 
-Pull the Docker Image from dockerhub:
-```bash
-docker pull
-```
+---
 
-Start long-running services:
+## Prerequisites
 
-```bash
-docker compose up -d db dashboard cloudflared
-```
+- Docker
+- Docker Compose
+- Server with persistent storage
+- Cloudflare Tunnel (optional, recommended)
 
-Run database migrations:
+---
 
-```bash
-docker compose --profile jobs run --rm migrate
-```
+## Configuration
 
-## Install System Services
+Copy the example configuration file.
 
 ```bash
-crontab -e
-*/3 * * * * cd /home/user/avian-acoustic-monitoring && /usr/bin/docker compose --profile jobs run --rm recorder >> /home/user/avian-acoustic-monitoring/logs/recorder.log 2>&1
-0 3 * * * cd /home/user/avian-acoustic-monitoring && git pull && docker compose pull >> /home/user/avian-acoustic-monitoring/logs/update.log 2>&1
+cp .env.server.example .env
 ```
 
-This installs the systemd services and timers required for scheduled recording and update operations.
+Configure the required environment variables before starting the server.
 
-## Verify Installation
+See `environment_variables.md` for details.
 
-Check running containers:
+---
+
+## Starting the Server
+
+Start all server services.
 
 ```bash
-docker ps
+docker compose \
+    -f docker/docker-compose.server.yaml \
+    up -d
 ```
 
-Check cron jobs:
+Verify the services are running.
 
 ```bash
-crontab -l
-systemctl status cron
+docker compose \
+    -f docker/docker-compose.server.yaml \
+    ps
 ```
+
+---
+
+# Database Migrations
+
+Database schema changes are managed using Alembic.
+
+Run migrations after deploying a new version.
+
+```bash
+docker compose \
+    -f docker/docker-compose.server.yaml \
+    --profile jobs \
+    run --rm migrate
+```
+
+Before applying schema changes to production, creating a PostgreSQL backup is recommended.
+
+---
+
+# Updating the Server
+
+Pull the newest images.
+
+```bash
+docker compose \
+    -f docker/docker-compose.server.yaml \
+    pull
+```
+
+Apply database migrations.
+
+```bash
+docker compose \
+    -f docker/docker-compose.server.yaml \
+    --profile jobs \
+    run --rm migrate
+```
+
+Restart the services.
+
+```bash
+docker compose \
+    -f docker/docker-compose.server.yaml \
+    up -d
+```
+
+---
+
+# Recording Node Deployment
+
+## Components
+
+Each recording node runs independently and consists of:
+
+- Scheduled recorder
+- BirdNET inference
+- Detection uploader
+- Heartbeat uploader
+
+No database is required on the node.
+
+---
+
+## Hardware Requirements
+
+Minimum recommended hardware:
+
+- Raspberry Pi 4
+- 4 GB RAM
+- USB microphone
+- Stable network connection
+- MicroSD card
+
+Additional hardware recommendations are described in `hardware.md`.
+
+---
+
+## Configuration
+
+Copy the example configuration file.
+
+```bash
+cp .env.node.example .env
+```
+
+Configure:
+
+- Server URL
+- API token
+- Station identifier
+- Geographic coordinates
+- Timezone
+- Recording parameters
+
+---
+
+## Pulling the Latest Image
+
+```bash
+docker compose \
+    -f docker/docker-compose.node.yaml \
+    pull
+```
+
+Unused images may be removed to conserve disk space.
+
+```bash
+docker image prune -f
+```
+
+---
+
+## Running the Recorder
+
+Execute the recording pipeline manually.
+
+```bash
+docker compose \
+    -f docker/docker-compose.node.yaml \
+    --profile jobs \
+    run --rm recorder
+```
+
+---
+
+## Running Heartbeat
+
+Heartbeat uploads can be tested independently.
+
+```bash
+docker compose \
+    -f docker/docker-compose.node.yaml \
+    --profile jobs \
+    run --rm heartbeat
+```
+
+---
+
+# Updating a Recording Node
+
+Pull the newest Docker image.
+
+```bash
+docker compose \
+    -f docker/docker-compose.node.yaml \
+    pull
+```
+
+Remove unused images.
+
+```bash
+docker image prune -f
+```
+
+The next scheduled execution will automatically use the updated image.
+
+---
+
+# Verifying a Deployment
+
+After deployment, verify that:
+
+- API is reachable
+- Dashboard loads successfully
+- Database migrations completed
+- Recording node uploads detections
+- Recording node uploads heartbeats
+- Station appears online in the dashboard
+
+---
+
+# Deployment Workflow
+
+Typical deployment workflow:
+
+```
+  Developer
+      │
+      ▼
+    GitHub
+      │
+      ▼
+GitHub Actions
+      │
+      ▼
+  Docker Hub
+      │
+      ├──────────────┐
+      ▼              ▼
+ Server          Recording Nodes
+```
+
+This allows all recording nodes to deploy the same container image while remaining independently configurable through environment variables.
+
+---
+
+# Backup Recommendations
+
+Before applying production updates:
+
+- Backup the PostgreSQL database.
+- Verify the backup can be restored.
+- Apply database migrations.
+- Restart the server.
+- Verify heartbeat uploads.
+- Verify detection uploads.
+
+Database backups should be performed regularly to prevent data loss.

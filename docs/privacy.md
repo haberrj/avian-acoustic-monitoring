@@ -1,46 +1,142 @@
-# Privacy Considerations
+# Privacy
 
 ## Overview
 
-This project was developed for passive acoustic monitoring of bird species using automated classification techniques. While the primary objective is the detection of bird vocalizations, environmental audio recordings may unintentionally capture human speech or other personally identifiable information.
+Avian Acoustic Monitoring is designed with privacy as a core architectural consideration.
 
-As a result, privacy considerations were incorporated into the system design from the beginning.
+The system performs BirdNET inference locally on each recording node and uploads only detection metadata to the server during normal operation.
 
-## Data Minimization
+Environmental audio recordings are treated as temporary processing artifacts rather than long-term data.
 
-The system follows a data minimization approach wherever practical.
+---
 
-Only the information required for bird detection and ecological analysis is retained. This includes:
+# Local Processing
 
-* Species name
-* Scientific name
-* Detection confidence
-* Detection timestamp
-* Geographic coordinates
-* Call duration
+All BirdNET inference is performed on the recording node.
 
-Raw audio recordings are not required for long-term operation of the system.
+The server never receives or processes raw audio.
 
-## Recording Retention
+Normal processing workflow:
 
-The default processing workflow is:
+```
+Record Audio
+      │
+      ▼
+BirdNET Analysis
+      │
+      ▼
+Extract Detection Metadata
+      │
+      ▼
+Upload Metadata
+      │
+      ▼
+Delete Recording
+```
 
-1. Record audio
-2. Analyze audio using BirdNET
-3. Store detection metadata
-4. Delete the original recording
+Only the extracted detection metadata is transmitted to the server.
 
-This approach reduces the amount of potentially sensitive audio retained by the system.
+---
 
-For development and troubleshooting purposes, recordings may optionally be retained in a dedicated debug mode. This mode should only be enabled when necessary.
+# Metadata Collected
 
-## Human Speech
+The server stores information required for visualization and analysis.
 
-The system is not intended to record, transcribe, classify, or analyze human conversations.
+Typical detection metadata includes:
 
-Any incidental capture of human speech is considered a by-product of environmental audio recording rather than a project objective.
+- Common species name
+- Scientific species name
+- Detection confidence
+- Detection timestamp (UTC)
+- Station identifier
+- Geographic coordinates
+- Call duration
 
-Where possible, deployments should avoid locations where regular human conversations are expected.
+Heartbeat messages additionally contain operational information such as:
+
+- Available memory
+- Available disk space
+- System uptime
+- Software version
+
+No personal information is intentionally collected.
+
+---
+
+# Audio Retention
+
+Audio recordings are deleted immediately after BirdNET inference under normal operation.
+
+This approach:
+
+- Reduces storage requirements
+- Minimizes bandwidth usage
+- Reduces privacy concerns
+- Simplifies long-term deployments
+
+When debug mode is enabled, recordings may be retained temporarily for troubleshooting or development purposes.
+
+---
+
+# Time Handling
+
+All timestamps are stored internally in Coordinated Universal Time (UTC).
+
+The dashboard converts timestamps to each station's configured local timezone for display.
+
+Using UTC internally provides:
+
+- Consistent storage
+- Correct daylight saving time handling
+- Support for globally distributed recording stations
+
+---
+
+# Station Information
+
+Each recording node is associated with a station.
+
+Station metadata includes:
+
+- Station identifier
+- Station name
+- Geographic location
+- Timezone
+
+This information is required to organize detections and support multi-station deployments.
+
+---
+
+# Network Communication
+
+Recording nodes communicate with the server using HTTPS.
+
+Detection metadata and heartbeat information are transmitted over encrypted connections.
+
+The server is designed to authenticate recording nodes before accepting uploaded data.
+
+---
+
+# Limitations
+
+Although the system minimizes the collection of unnecessary information, environmental recordings may still contain:
+
+- Human speech
+- Domestic animals
+- Vehicle noise
+- Other environmental sounds
+
+Users deploying recording nodes should ensure that deployments comply with applicable local privacy and data protection regulations.
+
+---
+
+# Design Philosophy
+
+The project follows the principle of collecting only the information required for biodiversity monitoring.
+
+Where practical, processing occurs locally on the recording node and only derived detection metadata is retained.
+
+This approach reduces storage requirements, minimizes network traffic, and helps protect privacy while maintaining the functionality required for long-term ecological monitoring.
 
 ## Public Access
 

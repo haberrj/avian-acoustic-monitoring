@@ -258,14 +258,18 @@ Additional documentation is available in the `docs` directory.
 
 | Document | Description |
 |----------|-------------|
+| api.md | API usage and architecture |
 | architecture.md | Overall system architecture |
+| database.md | Database structure and considerations |
 | deployment.md | Server and node deployment |
+| design_decisions.md | Design decisions |
 | development.md | Development workflow |
 | environment_variables.md | Configuration reference |
 | hardware.md | Hardware recommendations |
 | operations.md | Operational procedures |
 | privacy.md | Privacy considerations |
-| challenges.md | Design decisions |
+| testing.md | System and integration test concepts |
+
 
 ---
 
