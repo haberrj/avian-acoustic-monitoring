@@ -141,15 +141,15 @@ Audio recordings are temporary processing artifacts.
 Normal workflow:
 
 ```
-Record
-   │
-   ▼
-Analyze
-   │
-   ▼
+    Record
+       │
+       ▼
+    Analyze
+       │
+       ▼
 Extract Metadata
-   │
-   ▼
+       │
+       ▼
 Delete Recording
 ```
 

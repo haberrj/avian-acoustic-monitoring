@@ -47,13 +47,13 @@ When introducing new features, prefer:
 The project consists of three logical layers.
 
 ```
-Node
+  Node
     │
     ▼
-Server
+  Server
     │
     ▼
-Database
+ Database
 ```
 
 The dashboard reads from the database and is not involved in ingestion.
@@ -158,11 +158,11 @@ Business logic should live outside API endpoints whenever possible.
 Prefer:
 
 ```
-Route
+  Route
     ↓
-CRUD
+  CRUD
     ↓
-Database
+ Database
 ```
 
 rather than placing database logic directly inside routes.
@@ -197,13 +197,13 @@ Typical workflow:
 Modify SQLAlchemy model
         │
         ▼
-Generate migration
+ Generate migration
         │
         ▼
-Review migration
+  Review migration
         │
         ▼
-Apply migration
+  Apply migration
 ```
 
 Never modify production databases manually.

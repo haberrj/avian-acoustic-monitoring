@@ -219,22 +219,22 @@ Verify:
 The following sequence validates the complete system.
 
 ```
-Recorder
+  Recorder
      │
      ▼
-BirdNET
+  BirdNET
      │
      ▼
 Detection Upload
      │
      ▼
-FastAPI
+  FastAPI
      │
      ▼
-PostgreSQL
+ PostgreSQL
      │
      ▼
-Dashboard
+ Dashboard
 ```
 
 A successful end-to-end test confirms:
@@ -252,16 +252,16 @@ are all functioning correctly.
 
 Before considering a deployment complete:
 
-- [ ] Server containers running
-- [ ] Database migrations applied
-- [ ] API reachable
-- [ ] Dashboard accessible
-- [ ] Heartbeat upload verified
-- [ ] Detection upload verified
-- [ ] Station shown as Online
-- [ ] Local timezone displayed correctly
-- [ ] Detection count increasing
-- [ ] No container errors
-- [ ] Database backup completed (production)
+- Server containers running
+- Database migrations applied
+- API reachable
+- Dashboard accessible
+- Heartbeat upload verified
+- Detection upload verified
+- Station shown as Online
+- Local timezone displayed correctly
+- Detection count increasing
+- No container errors
+- Database backup completed (production)
 
 Completing this checklist provides confidence that the deployment is operating as expected.
