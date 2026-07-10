@@ -167,6 +167,20 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
         )
     ]
 
+    df["local_year_month"] = [
+        value.strftime("%Y-%m")
+        if isinstance(value, pd.Timestamp)
+        else None
+        for value in df["event_time_local"]
+    ]
+    
+    df["local_month_label"] = [
+        value.strftime("%b %Y")
+        if isinstance(value, pd.Timestamp)
+        else None
+        for value in df["event_time_local"]
+    ]
+
     df["display_name"] = (
         df["common_name"]
         .fillna(df["species"])
@@ -441,6 +455,45 @@ def render_overview_tab(df: pd.DataFrame) -> None:
     )
 
 
+def render_monthly_detections(df: pd.DataFrame) -> None:
+    st.subheader("Detections by Month")
+
+    monthly_df = df.dropna(
+        subset=["local_year_month", "local_month_label"]
+    ).copy()
+
+    if monthly_df.empty:
+        st.info("No monthly detection data available.")
+        return
+
+    monthly_counts = (
+        monthly_df.groupby(
+            ["local_year_month", "local_month_label"],
+            as_index=False,
+        )
+        .agg(detections=("id", "count"))
+        .sort_values("local_year_month")
+    )
+
+    chart_data = monthly_counts.rename(
+        columns={
+            "local_month_label": "Month",
+            "detections": "Detections",
+        }
+    ).set_index("Month")[["Detections"]]
+
+    st.bar_chart(
+        chart_data,
+        x_label="Month",
+        y_label="Detections",
+    )
+
+    st.caption(
+        "Monthly totals reflect the available monitoring period and may "
+        "represent partial months."
+    )
+
+
 def render_species_tab(df: pd.DataFrame) -> None:
     st.subheader("Species Summary")
 
@@ -477,10 +530,10 @@ def render_species_tab(df: pd.DataFrame) -> None:
 
     st.dataframe(species_summary, use_container_width=True, hide_index=True)
 
-    st.subheader("Top species")
+    st.subheader("Top Species")
     st.bar_chart(df["display_name"].value_counts().head(15))
 
-    st.subheader("Activity by hour")
+    st.subheader("Activity by Hour")
     hourly = (
         df.assign(hour=df["event_time_local"].apply(
             lambda value: value.hour if pd.notna(value) else None
@@ -490,6 +543,14 @@ def render_species_tab(df: pd.DataFrame) -> None:
         .size()
     )
     st.bar_chart(hourly)
+
+    st.dataframe(
+        species_summary,
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    render_monthly_detections(df)
 
 
 def render_stations_tab(
