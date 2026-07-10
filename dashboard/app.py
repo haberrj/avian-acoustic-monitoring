@@ -307,9 +307,9 @@ def render_kpis(df: pd.DataFrame) -> None:
     col3.metric("Stations", stations)
 
     if latest is not None and pd.notna(latest):
-        col4.metric("Latest detection", latest.strftime("%Y-%m-%d %H:%M"))
+        col4.metric("Latest Detection", format_local_timestamp(latest))
     else:
-        col4.metric("Latest detection", "None")
+        col4.metric("Latest Detection", "None")
 
 
 def calculate_zoom(df: pd.DataFrame) -> int:
