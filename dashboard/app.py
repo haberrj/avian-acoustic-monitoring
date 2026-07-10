@@ -122,6 +122,16 @@ def convert_utc_to_local(
         return utc_timestamp
 
 
+def format_local_timestamp(value: Any) -> str:
+    if value is None or pd.isna(value):
+        return ""
+
+    if isinstance(value, pd.Timestamp):
+        return value.strftime("%Y-%m-%d %H:%M:%S %Z")
+
+    return str(value)
+
+
 def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df
@@ -395,17 +405,37 @@ def render_overview_tab(df: pd.DataFrame) -> None:
         st.info("No detections match the current filters.")
         return
 
-    st.dataframe(
+    recent = (
         df[
             [
                 "event_time_local",
                 "display_name",
                 "species",
                 "confidence",
-                "call_duration",
                 "station",
             ]
-        ].sort_values("event_time_local", ascending=False).head(25).rename(columns={"even_time_local": "Local Time"}),
+        ]
+        .sort_values("event_time_local", ascending=False)
+        .head(25)
+        .copy()
+    )
+
+    recent["event_time_local"] = recent["event_time_local"].apply(
+        format_local_timestamp
+    )
+
+    recent = recent.rename(
+        columns={
+            "event_time_local": "Local Time",
+            "display_name": "Common Name",
+            "species": "Scientific Name",
+            "confidence": "Confidence",
+            "station": "Station",
+        }
+    )
+
+    st.dataframe(
+        recent,
         use_container_width=True,
         hide_index=True,
     )
@@ -428,6 +458,21 @@ def render_species_tab(df: pd.DataFrame) -> None:
         )
         .sort_values("detections", ascending=False)
         .reset_index()
+    )
+    species_summary["first_detection"] = species_summary[
+        "first_detection"
+    ].apply(format_local_timestamp)
+    species_summary["last_detection"] = species_summary[
+        "last_detection"
+    ].apply(format_local_timestamp)
+    species_summary = species_summary.rename(
+        columns={
+            "display_name": "Species",
+            "detections": "Detections",
+            "avg_confidence": "Average Confidence",
+            "first_detection": "First Detection",
+            "last_detection": "Last Detection",
+        }
     )
 
     st.dataframe(species_summary, use_container_width=True, hide_index=True)
@@ -534,6 +579,18 @@ def render_stations_tab(
         )
     )
 
+    status_icons = {
+        "Online": "🟢 Online",
+        "Stale": "🟡 Stale",
+        "Offline": "🔴 Offline",
+        "Never connected": "⚪ Never connected",
+        "Disabled": "⚫ Disabled",
+    }
+
+    display_df["status"] = display_df["status"].map(
+        status_icons
+    ).fillna(display_df["status"])
+
     display_df = display_df.rename(
         columns={
             "status": "Status",
@@ -578,6 +635,10 @@ def render_stations_tab(
     if station_summary.empty:
         st.info("No station coordinates available.")
         return
+
+    station_summary["latest_detection"] = station_summary[
+        "latest_detection"
+    ].apply(format_local_timestamp)
 
     station_summary = station_summary.rename(
         columns={
