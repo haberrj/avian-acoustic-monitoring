@@ -27,8 +27,8 @@ def get_wifi_signal_dbm() -> float | None:
 
 
 def main() -> None:
-    api_base_url = os.environ["API_BASE_URL"].rstrip("/")
-    token = os.environ.get("NODE_API_TOKEN")
+    api_base_url = os.environ["API_URL"].rstrip("/")
+    token = os.environ.get("API_TOKEN")
 
     payload = {
         "station_id": os.environ["STATION_ID"],
