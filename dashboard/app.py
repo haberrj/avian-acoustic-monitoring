@@ -361,51 +361,76 @@ def render_map(df: pd.DataFrame) -> None:
     map_df["latitude"] = map_df["latitude"].astype(float)
     map_df["longitude"] = map_df["longitude"].astype(float)
     map_df["confidence"] = map_df["confidence"].astype(float)
-    map_df["event_time"] = map_df["event_time"].astype(str)
 
     station_df = build_station_summary(map_df)
 
-    center_lat = map_df["latitude"].mean()
-    center_lon = map_df["longitude"].mean()
+    if station_df.empty:
+        st.info("No station coordinates available.")
+        return
+
+    # Format values before passing them to PyDeck tooltips.
+    station_df["latest_detection"] = station_df[
+        "latest_detection"
+    ].apply(format_local_timestamp)
+
+    # Keep markers readable on mobile while still reflecting detection volume.
+    station_df["marker_radius"] = (
+        16
+        + station_df["detections"].clip(lower=1).pow(0.25) * 5
+    ).clip(upper=34)
+
+    center_lat = station_df["latitude"].mean()
+    center_lon = station_df["longitude"].mean()
 
     heatmap_layer = pdk.Layer(
         "HeatmapLayer",
         data=station_df,
         get_position="[longitude, latitude]",
         get_weight="detections",
-        radiusPixels=80,
+        radiusPixels=110,
+        intensity=1.5,
+        threshold=0.03,
     )
 
+    # Visible fallback for browsers/devices where HeatmapLayer does not render.
     station_layer = pdk.Layer(
         "ScatterplotLayer",
         data=station_df,
         get_position="[longitude, latitude]",
         radius_units="pixels",
-        get_radius=12,
-        get_fill_color=[255, 255, 255, 0],
-        get_line_color=[255, 255, 255, 0],
+        get_radius="marker_radius",
+        get_fill_color=[30, 144, 255, 190],
+        get_line_color=[255, 255, 255, 230],
+        line_width_min_pixels=2,
         pickable=True,
+        auto_highlight=True,
     )
 
     deck = pdk.Deck(
-        layers=[heatmap_layer, station_layer],
+        layers=[
+            heatmap_layer,
+            station_layer,
+        ],
         initial_view_state=pdk.ViewState(
-            latitude=center_lat,
-            longitude=center_lon,
-            zoom=calculate_zoom(map_df),
+            latitude=float(center_lat),
+            longitude=float(center_lon),
+            zoom=calculate_zoom(station_df),
             pitch=0,
         ),
         tooltip={
             "html": (
-                "<b>Station {station}</b><br/>"
+                "<b>{station}</b><br/>"
                 "Detections: {detections}<br/>"
                 "Species: {species}<br/>"
                 "Latest: {latest_detection}"
             )
-        }, # type: ignore[arg-type]
+        },  # type: ignore[arg-type]
     )
 
-    st.pydeck_chart(deck, use_container_width=True)
+    st.pydeck_chart(
+        deck,
+        use_container_width=True,
+    )
 
 
 def render_overview_tab(df: pd.DataFrame) -> None:
