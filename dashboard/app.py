@@ -471,19 +471,15 @@ def render_monthly_detections(df: pd.DataFrame) -> None:
             ["local_year_month", "local_month_label"],
             as_index=False,
         )
-        .agg(detections=("id", "count"))
-        .sort_values("local_year_month")
+        .agg(Detections=("id", "count"))
+        .sort_values("local_year_month", ascending=True)
+        .rename(columns={"local_month_label": "Month"})
     )
 
-    chart_data = monthly_counts.rename(
-        columns={
-            "local_month_label": "Month",
-            "detections": "Detections",
-        }
-    ).set_index("Month")[["Detections"]]
-
     st.bar_chart(
-        chart_data,
+        monthly_counts,
+        x="Month",
+        y="Detections",
         x_label="Month",
         y_label="Detections",
     )
@@ -543,12 +539,6 @@ def render_species_tab(df: pd.DataFrame) -> None:
         .size()
     )
     st.bar_chart(hourly)
-
-    st.dataframe(
-        species_summary,
-        use_container_width=True,
-        hide_index=True,
-    )
 
     render_monthly_detections(df)
 
