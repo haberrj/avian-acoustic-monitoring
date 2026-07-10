@@ -6,6 +6,7 @@ from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import pandas as pd
 import pydeck as pdk
+import altair as alt
 import streamlit as st
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
@@ -476,12 +477,39 @@ def render_monthly_detections(df: pd.DataFrame) -> None:
         .rename(columns={"local_month_label": "Month"})
     )
 
-    st.bar_chart(
-        monthly_counts,
-        x="Month",
-        y="Detections",
-        x_label="Month",
-        y_label="Detections",
+    month_order = monthly_counts["Month"].tolist()
+
+    chart = (
+        alt.Chart(monthly_counts)
+        .mark_bar()
+        .encode(
+            x=alt.X(
+                "Month:N",
+                sort=month_order,
+                title="Month",
+                axis=alt.Axis(labelAngle=0),
+            ),
+            y=alt.Y(
+                "Detections:Q",
+                title="Detections",
+            ),
+            tooltip=[
+                alt.Tooltip("Month:N", title="Month"),
+                alt.Tooltip(
+                    "Detections:Q",
+                    title="Detections",
+                    format=",",
+                ),
+            ],
+        )
+        .properties(
+            height=400,
+        )
+    )
+
+    st.altair_chart(
+        chart,
+        use_container_width=True,
     )
 
     st.caption(
@@ -750,10 +778,11 @@ def render_system_tab(
         st.warning("No detections found.")
         return
 
-    latest_detection = detections_df["event_time"].max()
-    age = pd.Timestamp.now(tz=latest_detection.tz) - latest_detection
+    latest_detection_utc = detections_df["event_time_utc"].max()
+    latest_detection_local = detections_df["event_time_local"].max()
+    age = pd.Timestamp.now(tz="UTC") - latest_detection_utc
 
-    st.write("Latest detection:", latest_detection)
+    st.write("Latest detection:", format_local_timestamp(latest_detection_local))
     st.write("Total database rows loaded:", len(detections_df))
 
     if age > pd.Timedelta(hours=24):
