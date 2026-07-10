@@ -1,4 +1,3 @@
-
 import os
 from datetime import datetime, timezone
 
@@ -35,10 +34,3 @@ class AudioRecorder:
 
         write(filename, self.sample_rate, audio_data)
         return filename
-
-
-# if __name__ == "__main__":
-#     recordings_dir = os.getenv("RECORDINGS_DIR", "/app/recordings")
-#     audio_rec = AudioRecorder(recordings_dir, 44100)
-#     recording = audio_rec.record_audio(30)
-#     print("Recording,", recording, ", captured!")
