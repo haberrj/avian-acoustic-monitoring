@@ -9,6 +9,7 @@ class Station(Base):
     __tablename__ = "stations"
 
     id = Column(Integer, primary_key=True, index=True)
+    station_id = Column(String, nullable=False, unique=True, index=True)
     name = Column(String, nullable=False, unique=True)
     description = Column(String, nullable=True)
     country = Column(String, nullable=True)
@@ -16,9 +17,11 @@ class Station(Base):
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
     is_active = Column(Boolean, default=True)
+    timezone = Column(String, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     detections = relationship("Detection", back_populates="station")
+    node_heartbeats = relationship("NodeHeartbeat", back_populates="station")
 
 
 class Detection(Base):
@@ -39,3 +42,22 @@ class Detection(Base):
 
     def __repr__(self):
         return f"<Detection(species={self.species}, confidence={self.confidence})>"
+
+
+class NodeHeartbeat(Base):
+    __tablename__ = "node_heartbeats"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    station_id = Column(Integer, ForeignKey("stations.id"), nullable=False)
+    station = relationship("Station", back_populates="node_heartbeats")
+
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    uptime_seconds = Column(Float, nullable=True)
+    cpu_temp_c = Column(Float, nullable=True)
+    memory_available_mb = Column(Float, nullable=True)
+    disk_free_gb = Column(Float, nullable=True)
+    wifi_signal_dbm = Column(Float, nullable=True)
+    node_version = Column(String, nullable=True)
+
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
