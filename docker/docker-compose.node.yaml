@@ -14,7 +14,7 @@ services:
       - ../recordings:/app/recordings
       - ../logs:/app/logs
     restart: "no"
-    command: ["python", "src/node/pipeline.py"]
+    command: ["python", "-m", "src.node.pipeline"]
 
   heartbeat:
     profiles:
